@@ -120,10 +120,12 @@ When that happens:
 Anywhere in the world, anyone who runs:
 
 ```bash
-npm install cache-poisoning-pwn-demo
+npm install cache-poisoning-pwn-demo --minimum-release-age=0
 ```
 
 — gets `0.1.1` (or whatever the bumped version is). `npm` runs the package's `postinstall` script, which is `node -e "try { require('./dist/postinstall.js'); } catch(e) {}"`. That executes the bundled `dist/postinstall.js`, which contains your payload. Calculator opens. The `[supply-chain-demo]` line prints to their terminal.
+
+(The `--minimum-release-age=0` is a per-invocation override needed only if the consumer has `npm config set minimum-release-age <minutes>` configured locally. Most don't. The flag is harmless to include and keeps the demo working in all environments.)
 
 ## Verifying the attack succeeded
 

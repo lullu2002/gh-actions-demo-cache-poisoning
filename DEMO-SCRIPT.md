@@ -14,8 +14,10 @@ Prerequisites: [`SETUP.md`](SETUP.md) completed. Two GitHub accounts ready (main
 
    ```bash
    cd /tmp && mkdir consumer && cd consumer && npm init -y >/dev/null
-   npm install <your-package>
+   npm install <your-package> --minimum-release-age=0
    ```
+
+   The `--minimum-release-age=0` flag is a per-invocation override. Some environments (including yours, if `npm config get minimum-release-age` returns >0) refuse to install package versions younger than that age. The flag bypasses it without changing your default config.
 
    Audience sees a normal install. The `postinstall` prints the harmless thank-you message. No calculator. **This is v0.1.0. The package is clean.**
 
@@ -87,8 +89,10 @@ Prerequisites: [`SETUP.md`](SETUP.md) completed. Two GitHub accounts ready (main
 
     ```bash
     cd /tmp && mkdir -p consumer-v2 && cd consumer-v2 && npm init -y >/dev/null
-    npm install <your-package>
+    npm install <your-package> --minimum-release-age=0
     ```
+
+    The `--minimum-release-age=0` flag is per-invocation only — it bypasses the recently-published-protection without changing the audience's default config. Most audiences won't have `minimum-release-age` set at all, but including the flag makes the demo robust regardless.
 
     Their calculator opens. The `[supply-chain-demo]` line prints in their terminal.
 
@@ -143,6 +147,8 @@ npm install
 **`npm publish` fails with "version already exists".** A previous demo run left the version. Either unpublish or bump again. The workflow does `npm version patch` so subsequent pushes auto-increment.
 
 **Calculator doesn't open on audience machine.** Some firewall/sandbox blocks `child_process.exec`. Have them run the payload directly: `node -e "$(npm view <your-package>@0.1.1 dist.tarball ...)"`. Or just show the bundled source.
+
+**`npm install` fails with `ENOVERSIONS`.** The audience member has `minimum-release-age` set (npm 10+ defensive feature, increasingly common in security-conscious orgs). Tell them to add `--minimum-release-age=0` to the install command. This is a per-invocation override and doesn't change their default config.
 
 **Cache doesn't hit on the release workflow.** Verify the lockfile is committed and identical between the attacker's PR and main. The cache key is `nm-${{ hashFiles('package-lock.json') }}`.
 
