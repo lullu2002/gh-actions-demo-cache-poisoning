@@ -53,14 +53,19 @@ jobs:
         # ends up containing the attacker's bundled code.
         run: npm run build
 
-      - name: Bump patch version
-        # For the demo we auto-bump so each push produces a new release.
-        # In real life this would be release-please / changesets / manual.
+      - name: Set deterministic version
+        # For the demo: each workflow run gets a unique version derived
+        # from the run number, so repeated demos don't collide on npm.
+        # Real-world packages would use release-please / changesets / a
+        # manual version bump in a separate PR.
         run: |
-          git config user.name "demo-release-bot"
-          git config user.email "demo@local"
-          npm version patch --no-git-tag-version
-          NEW_VERSION=$(node -p "require('./package.json').version")
+          NEW_VERSION="0.1.${{ github.run_number }}"
+          node -e "
+            const fs = require('fs');
+            const pkg = require('./package.json');
+            pkg.version = '$NEW_VERSION';
+            fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
           echo "Publishing version $NEW_VERSION"
 
       - name: Publish to npm
