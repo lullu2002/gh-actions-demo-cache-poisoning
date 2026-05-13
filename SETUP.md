@@ -37,12 +37,25 @@ Or just edit by hand.
 
 ## 3. Publish the clean baseline (v0.1.0) manually
 
+**Important: publish from a clean working tree.** If you have run the local attack simulation (`node attack/simulate-attack.js`), your `node_modules/is-number/index.js` is poisoned. Publishing in that state would bundle the payload into v0.1.0 itself — every consumer would get pwned by v0.1.0, not just by the later v0.1.1. The whole demo arc depends on v0.1.0 being clean.
+
+The safe way:
+
 ```bash
-npm install            # builds dist/ via prepare hook
-npm publish --access public
+./publish-clean.sh
 ```
 
-Verify on `https://www.npmjs.com/package/<your-package-name>` — should show v0.1.0.
+This script wipes `node_modules` and `dist`, reinstalls clean dependencies, sanity-checks `dist/postinstall.js` for the demo-payload marker, then runs `npm publish`. It asks for confirmation before publishing.
+
+If you want to do it manually:
+
+```bash
+rm -rf node_modules dist
+npm install              # rebuilds dist/ via prepare hook
+grep -q 'supply-chain-demo' dist/postinstall.js && echo "ABORT: poisoned" || npm publish --access public
+```
+
+Verify on `https://www.npmjs.com/package/<your-package-name>` — should show v0.1.0. Run `npm install <package>` from a scratch directory and confirm only the harmless "thanks for installing" message prints. **No calculator.**
 
 ## 4. Configure npm trusted publishing (OIDC)
 
