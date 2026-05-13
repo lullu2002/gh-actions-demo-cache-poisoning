@@ -55,6 +55,13 @@ npm install              # rebuilds dist/ via prepare hook
 grep -q 'supply-chain-demo' dist/postinstall.js && echo "ABORT: poisoned" || npm publish --access public
 ```
 
+**2FA prompt**: npm requires a one-time code from your authenticator app when publishing (assuming you enabled `auth-and-writes` 2FA, which is recommended). The CLI will prompt:
+```
+This operation requires a one-time password.
+Enter OTP: ______
+```
+Open your authenticator app, type the 6 digits, hit enter. If using `--otp=` on the command line, the code is valid for ~30 seconds and one use only.
+
 Verify on `https://www.npmjs.com/package/<your-package-name>` — should show v0.1.0. Run `npm install <package>` from a scratch directory and confirm only the harmless "thanks for installing" message prints. **No calculator.**
 
 ## 4. Configure npm trusted publishing (OIDC)
