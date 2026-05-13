@@ -31,8 +31,13 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Upgrade npm to a version that supports trusted publishing
+        # npm trusted publisher OIDC requires npm >= 11.5.1. Node 22 ships
+        # npm 10.x; explicitly install latest.
+        run: npm install -g npm@latest
 
       - name: Restore cached node_modules
         # Same cache key as bundle-size. If the previous PR's bundle-size
