@@ -152,6 +152,25 @@ npm install
 
 **Cache doesn't hit on the release workflow.** Verify the lockfile is committed and identical between the attacker's PR and main. The cache key is `nm-${{ hashFiles('package-lock.json') }}`.
 
+**Published version comes out CLEAN even after running the attack PR.** This is the most subtle gotcha. `actions/cache@v4` only *saves* on cache miss. If the cache key already has an entry (e.g. populated by a prior release workflow run), the bundle-size workflow's "Cache hit" path will skip the save step, and the poisoned `node_modules` is never persisted to the shared cache. The release workflow then restores the old (clean) cache.
+
+Fix before running a live demo: **evict the cache between runs.**
+```bash
+gh -R lullu57/gh-actions-demo-cache-poisoning cache list --json id,key \
+  | python3 -c "import sys,json,subprocess; [subprocess.run(['gh','-R','lullu57/gh-actions-demo-cache-poisoning','cache','delete',str(c['id'])]) for c in json.load(sys.stdin) if c['key'].startswith('nm-')]"
+```
+
+Then re-trigger the bundle-size workflow (close + reopen the PR, or push a new commit to the attack branch). With no existing cache, bundle-size hits a miss → installs fresh → dev-hook plants poison → cache is **saved** with the poison → release workflow restores it → poisoned version publishes.
+
+This gotcha is itself part of the attack's real-world dynamics: in the TanStack incident, the cache state at the time of the attacker's PR happened to be favorable. For a demo you want determinism, so always evict before each live run.
+
+**Poisoned version stays on npm after the demo and pwn's anyone who finds it.** Unpublish immediately:
+```bash
+npm unpublish cache-poisoning-pwn-demo@0.1.X
+# requires interactive SSO/OTP — must be run by the package owner from their terminal
+```
+npm allows unpublish within 72 hours of original publish OR for packages with no dependents. The demo package qualifies.
+
 ---
 
 ## Variant: faster demo, no live attack
