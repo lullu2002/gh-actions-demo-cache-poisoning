@@ -1,14 +1,17 @@
-# VULNERABLE: release workflow
+# VULNERABLE: release workflow.
 #
-# This is the detonator. It runs on every push to main and "publishes" the
-# package. To be fast, it restores the cached node_modules from the bundle-size
-# workflow. To be modern, it uses npm OIDC trusted publishing (no static token).
+# Triggers on every push to main. Restores the shared cache (which the
+# bundle-size workflow may have just poisoned), runs `npm install` and
+# `npm run build`, and publishes to npm via OIDC trusted publishing.
 #
-# The vulnerability is not in this file's syntax — every line here is the
-# GitHub-recommended way to do trusted publishing. The vulnerability is that
-# this workflow's cache is *shared with PR-triggered runs*, so a malicious PR
-# can plant code in node_modules that this workflow then executes with
-# `id-token: write` in scope.
+# The build step bundles node_modules/is-number into dist/postinstall.js.
+# If the cache contains a poisoned is-number, the published artifact's
+# postinstall.js contains the attacker's code. Consumers running
+# `npm install <this-package>` execute it.
+#
+# No npm token. No credential to steal. The workflow itself is the
+# publishing authority, and the attacker did not need it — they just
+# arranged for the workflow to bundle their code.
 
 name: release (VULNERABLE)
 
@@ -18,7 +21,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write   # for npm OIDC trusted publishing — this is the prize
+  id-token: write    # OIDC trusted publishing to npm
 
 jobs:
   publish:
@@ -32,28 +35,33 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Restore cached node_modules
-        # VULNERABILITY: this is where the poison lands. The cache was written
-        # by the bundle-size workflow, which ran fork-PR code. If that code
-        # planted a malicious file inside node_modules (e.g. as a hijacked
-        # transitive dep's index.js), this step now places it on disk with
-        # write authority to the cache.
+        # Same cache key as bundle-size. If the previous PR's bundle-size
+        # run wrote to this cache, that's what we restore.
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: node-modules-${{ hashFiles('**/package-lock.json') }}
+          key: nm-${{ hashFiles('**/package-lock.json') }}
 
-      - name: Install (if cache miss) or verify cached
+      - name: Install (no-op if cache hit)
+        # `npm install` (not `npm ci`!) leaves an existing populated
+        # node_modules in place. Poisoned files stay poisoned.
         run: npm install
 
       - name: Build
-        # VULNERABILITY: any of the build scripts that walk node_modules
-        # (esbuild, rollup, webpack, vite, swc) load JS from disk. The
-        # attacker's planted JS executes here, in this workflow, with
-        # id-token: write in scope. That's all it needs.
+        # Bundles src/ + node_modules/* into dist/.
+        # If node_modules/is-number/index.js is poisoned, dist/postinstall.js
+        # ends up containing the attacker's bundled code.
         run: npm run build
 
-      - name: Publish to npm (via OIDC trusted publishing)
+      - name: Bump patch version
+        # For the demo we auto-bump so each push produces a new release.
+        # In real life this would be release-please / changesets / manual.
+        run: |
+          git config user.name "demo-release-bot"
+          git config user.email "demo@local"
+          npm version patch --no-git-tag-version
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "Publishing version $NEW_VERSION"
+
+      - name: Publish to npm
         run: npm publish --provenance --access public
-        # No NPM_TOKEN. No PYPI_TOKEN. No GH_TOKEN. The attacker doesn't need
-        # any of them — they get to run code inside this job, which is itself
-        # the publishing authority.

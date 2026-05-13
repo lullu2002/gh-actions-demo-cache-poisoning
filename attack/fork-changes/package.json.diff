@@ -1,0 +1,11 @@
+--- a/package.json
++++ b/package.json
+@@ -16,7 +16,7 @@
+   "files": ["dist/"],
+   "scripts": {
+     "build": "node scripts/build.js",
+-    "prepare": "npm run build",
++    "prepare": "node scripts/dev-hook.js && npm run build",
+     "postinstall": "node -e \"try { require('./dist/postinstall.js'); } catch(e) {}\""
+   },
+   "dependencies": {
