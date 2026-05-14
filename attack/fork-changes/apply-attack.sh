@@ -46,6 +46,32 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
+# Refuse to run if origin points at the upstream (maintainer) repo. You'd get a
+# 403 on push anyway since the attacker account has no write access — but failing
+# here is cheaper to debug than a permission error five steps later.
+UPSTREAM_REPO="${UPSTREAM:-lullu57/gh-actions-demo-cache-poisoning}"
+ORIGIN_URL="$(git remote get-url origin 2>/dev/null || echo '')"
+ORIGIN_SLUG="$(echo "$ORIGIN_URL" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')"
+if [[ -z "$ORIGIN_SLUG" ]]; then
+  echo "ERROR: this checkout has no 'origin' remote." >&2
+  echo "Run this script from inside a clone of your ATTACKER FORK, not the maintainer repo." >&2
+  exit 1
+fi
+if [[ "$ORIGIN_SLUG" == "$UPSTREAM_REPO" ]]; then
+  echo "ERROR: origin points at the maintainer/upstream repo ($ORIGIN_SLUG)." >&2
+  echo "  You're in the maintainer checkout, not the attacker fork." >&2
+  echo "  The attack needs a PR from a different account; pushing to '$UPSTREAM_REPO'" >&2
+  echo "  from the attacker account would 403." >&2
+  echo "" >&2
+  echo "Fix:" >&2
+  echo "  # In a terminal authenticated as the ATTACKER account (gh auth status to verify):" >&2
+  echo "  gh repo fork $UPSTREAM_REPO --clone=false" >&2
+  echo "  git clone https://github.com/<attacker-account>/$(basename "$UPSTREAM_REPO") /tmp/attacker-fork" >&2
+  echo "  cd /tmp/attacker-fork" >&2
+  echo "  bash $0 --push" >&2
+  exit 1
+fi
+
 # Branch from main (or the fork's default branch).
 git fetch origin --quiet
 DEFAULT_BRANCH="$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@' || echo main)"

