@@ -16,7 +16,7 @@ Reading the TanStack postmortem communicates the *shape* of the attack; running 
 
 ## If you found this organically (via npm or search)
 
-The package on npm is real. Installing it triggers the educational payload — it opens Calculator and prints a marker. It does not exfiltrate, persist, or do anything else. It is not a typosquat; the name is intentionally demo-flagged. If you maintain an npm package built with Actions, [`fix/README.md`](fix/README.md) has the three workflow changes that make this attack class structurally impossible. If you consume npm packages in CI, set `npm config set minimum-release-age 10080` (see [below](#consumer-side-mitigation)).
+The package on npm is real. Installing it triggers the educational payload — it opens Calculator and prints a marker. It does not exfiltrate, persist, or do anything else. It is not a typosquat; the name is intentionally demo-flagged. If you maintain an npm package built with Actions, [`fix/README.md`](fix/README.md) has the three workflow changes that make this attack class structurally impossible. If you consume npm packages in CI, set `npm config set min-release-age 7` (see [below](#consumer-side-mitigation)).
 
 ## The attack in one diagram
 
@@ -114,12 +114,12 @@ Details in [`fix/README.md`](fix/README.md).
 The single most-effective defense from the consumer side is refusing to install package versions that were published very recently. npm 10+ supports this natively:
 
 ```bash
-npm config set minimum-release-age 10080    # 7 days, in minutes
+npm config set min-release-age 7    # 7 days
 ```
 
 A malicious version published via this chain then has 7 days to be detected and unpublished before any consumer's CI installs it. Combine with `npm audit` / `osv-scanner` in CI and most known-compromise scenarios get caught cleanly.
 
-To install **this demo package** despite the setting, append `--minimum-release-age=0` to the install command — a per-invocation override that doesn't touch your default config.
+To install **this demo package** despite the setting, append `--min-release-age=0` to the install command — a per-invocation override that doesn't touch your default config.
 
 ## How the demo publishes without a token
 

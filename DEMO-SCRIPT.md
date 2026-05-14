@@ -24,10 +24,10 @@ The cache eviction is load-bearing: `actions/cache@v4` only *saves* on a cache m
 
    ```bash
    cd /tmp && mkdir consumer && cd consumer && npm init -y >/dev/null
-   npm install cache-poisoning-pwn-demo --minimum-release-age=0
+   npm install cache-poisoning-pwn-demo --min-release-age=0
    ```
 
-   The `--minimum-release-age=0` flag is a per-invocation override. Some environments (including yours, if `npm config get minimum-release-age` returns >0) refuse to install package versions younger than that age. The flag bypasses it without changing your default config.
+   The `--min-release-age=0` flag is a per-invocation override. Some environments (including yours, if `npm config get min-release-age` returns >0) refuse to install package versions younger than that age. The flag bypasses it without changing your default config.
 
    Audience sees a normal install. The `postinstall` prints the harmless thank-you message. No calculator. **This is v0.1.0. The package is clean.**
 
@@ -92,10 +92,10 @@ The cache eviction is load-bearing: `actions/cache@v4` only *saves* on a cache m
 
     ```bash
     cd /tmp && mkdir -p consumer-v2 && cd consumer-v2 && npm init -y >/dev/null
-    npm install cache-poisoning-pwn-demo --minimum-release-age=0
+    npm install cache-poisoning-pwn-demo --min-release-age=0
     ```
 
-    The `--minimum-release-age=0` flag is per-invocation only — it bypasses the recently-published-protection without changing the audience's default config. Most audiences won't have `minimum-release-age` set at all, but including the flag makes the demo robust regardless.
+    The `--min-release-age=0` flag is per-invocation only — it bypasses the recently-published-protection without changing the audience's default config. Most audiences won't have `min-release-age` set at all, but including the flag makes the demo robust regardless.
 
     Their calculator opens. The `[supply-chain-demo]` line prints in their terminal.
 
@@ -163,7 +163,7 @@ npm install
 
 **Calculator doesn't open on audience machine.** Some firewall/sandbox blocks `child_process.exec`. Have them run the payload directly: `node -e "$(npm view cache-poisoning-pwn-demo@0.1.1 dist.tarball ...)"`. Or just show the bundled source.
 
-**`npm install` fails with `ENOVERSIONS`.** The audience member has `minimum-release-age` set (npm 10+ defensive feature, increasingly common in security-conscious orgs). Tell them to add `--minimum-release-age=0` to the install command. This is a per-invocation override and doesn't change their default config.
+**`npm install` fails with `ENOVERSIONS`.** The user has `min-release-age` set in `~/.npmrc` (npm 11+ defensive feature, increasingly common in security-conscious orgs — and the same setting this demo argues *for*). Add `--min-release-age=0` to the install command for a per-invocation override that doesn't touch the default config. On npm 10 the option was named `minimum-release-age` and took *minutes*; on npm 11 it was renamed to `min-release-age` and takes *days*. If `npm --version` shows 10.x, use `--minimum-release-age=0`. To cover both audiences in one command: pass both flags — the unknown one just prints a warning.
 
 **Cache doesn't hit on the release workflow.** Verify the lockfile is committed and identical between the attacker's PR and main. The cache key is `nm-${{ hashFiles('package-lock.json') }}`.
 
